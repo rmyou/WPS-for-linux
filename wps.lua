@@ -15,7 +15,7 @@
 -- 挂载方式：在 ~/.config/hypr/hyprland.lua 中加 require("hypr.wps")
 -- 版本：Hyprland 0.56.x（Lua 配置）。0.54 及更早的 hyprlang 写法见 README。
 
-local wps_classes = "^(wps|et|wpp|wpspdf|pdf)$"
+local wps_classes = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)$"
 
 -- 1) 下拉/调色板等辅助窗口：浮动、去掉 Hyprland 的装饰
 hl.window_rule({
@@ -23,7 +23,7 @@ hl.window_rule({
   match = {
     class = wps_classes,
     -- 标题为空或等于 class 名 = 字体/字号下拉、调色板等辅助窗口
-    title = "^(wps|et|wpp|wpspdf|pdf)?$",
+    title = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$",
   },
   float = true,          -- 不参与平铺
   decorate = false,      -- 不要 Hyprland 画的边框/装饰
@@ -43,7 +43,7 @@ hl.window_rule({
   match = {
     class = wps_classes,
     -- 主窗口标题形如「文件名 - WPS 表格」，不是空/class 名
-    title = "negative:^(wps|et|wpp|wpspdf|pdf)?$",
+    title = "negative:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$",
   },
   no_follow_mouse = true,
 })
@@ -52,7 +52,7 @@ hl.window_rule({
 -- 让 WPS 主窗口浮动 + 最大化（视觉上等同全屏，但不再被平铺裁剪）。
 -- hl.window_rule({
 --   name = "wps-main-float",
---   match = { class = wps_classes, title = "negative:^(wps|et|wpp|wpspdf|pdf)?$" },
+--   match = { class = wps_classes, title = "negative:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$" },
 --   float = true,
 --   maximize = true,
 -- })
@@ -61,6 +61,6 @@ hl.window_rule({
 -- 换成给下拉窗口加 stay_focused。代价：下拉关掉之前几乎点不动其它窗口。
 -- hl.window_rule({
 --   name = "wps-dropdown-stay-focused",
---   match = { class = wps_classes, title = "^(wps|et|wpp|wpspdf|pdf)?$" },
+--   match = { class = wps_classes, title = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$" },
 --   stay_focused = true,
 -- })

@@ -47,8 +47,8 @@ for c in json.load(sys.stdin):
 
 ```lua
 hl.window_rule({
-  match = { class = "^(wps|et|wpp|wpspdf|pdf)$",
-            title = "negative:^(wps|et|wpp|wpspdf|pdf)?$" },
+  match = { class = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)$",
+            title = "negative:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$" },
   no_follow_mouse = true,
 })
 ```
@@ -57,7 +57,7 @@ hl.window_rule({
 
 ```lua
 hl.window_rule({
-  match = { class = "^(wps|et|wpp|wpspdf|pdf)$", title = "^(wps|et|wpp|wpspdf|pdf)?$" },
+  match = { class = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)$", title = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$" },
   stay_focused = true,
 })
 ```

@@ -91,7 +91,7 @@ fc-match "Microsoft YaHei"
 复现：打开 WPS 表格，点一次字号/字体下拉，然后**保持它开着**，在终端里执行：
 
 ```bash
-hyprctl clients -j | jq '.[] | select(.class|test("^(wps|et|wpp|wpspdf|pdf)$"))
+hyprctl clients -j | jq '.[] | select(.class|test("^(wpsoffice|wps|et|wpp|wpspdf|pdf)$"))
                          | {class,title,xwayland,size,at,floating}'
 ```
 
@@ -179,11 +179,13 @@ WPS 的下拉窗口和主窗口 **class 相同**（`et` / `wps` / `wpp` / `wpspd
 
 | 窗口 | class | title |
 |---|---|---|
-| 主窗口（表格） | `et` | `报表.xlsx - WPS 表格` |
+| 主窗口（365 标签式外壳） | `wpsoffice` | `工作簿1 - WPS Office` |
+| 主窗口（旧版单组件） | `et` / `wps` | `报表.xlsx - WPS 表格` |
 | 字体/字号下拉 | `et` | `et`（WM_NAME 为空，回退成 class） |
-| 主窗口（文字） | `wps` | `文档.docx - WPS 文字` |
 
 所以用「class 属于 WPS 家族 **且** 标题为空或等于家族名」来精确命中辅助窗口，不会误伤主窗口。
+
+> 注意：**不同版本/打包方式的主窗口 class 不一样**——WPS 365 是 `wpsoffice`，老版单组件是 `et`/`wps`。写规则前一定先用 `hyprctl clients` 确认实际值（这一点踩过坑，见 §6.6）。
 
 ---
 
@@ -199,7 +201,7 @@ WPS 的下拉窗口和主窗口 **class 相同**（`et` / `wps` / `wpp` / `wpspd
 -- 窗口标题为空，所以 Hyprland 里 title 会退化成 class 名）。
 -- 平铺布局下这个窗口会被当成普通窗口参与平铺 / 加边框，看起来就像
 -- 「点下拉框却新开了一个窗口」。这里把这几个辅助窗口按弹出菜单处理。
-local wps_classes = "^(wps|et|wpp|wpspdf|pdf)$"
+local wps_classes = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)$"
 
 -- 1) 下拉/调色板等辅助窗口：浮动、去掉 Hyprland 的装饰
 hl.window_rule({
@@ -207,7 +209,7 @@ hl.window_rule({
   match = {
     class = wps_classes,
     -- 标题为空或等于 class 名 = WPS 的字体/字号下拉、调色板等辅助窗口
-    title = "^(wps|et|wpp|wpspdf|pdf)?$",
+    title = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$",
   },
   float = true,          -- 不参与平铺
   decorate = false,      -- 不要 Hyprland 画的边框/装饰
@@ -226,7 +228,7 @@ hl.window_rule({
   name = "wps-main-no-hover-focus",
   match = {
     class = wps_classes,
-    title = "negative:^(wps|et|wpp|wpspdf|pdf)?$",
+    title = "negative:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$",
   },
   no_follow_mouse = true,
 })
@@ -247,12 +249,12 @@ require("hypr.autostart")
 还在用 `hyprland.conf` 的话，等价写法大致是：
 
 ```ini
-windowrulev2 = float,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|pdf)?$
-windowrulev2 = noborder,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|pdf)?$
-windowrulev2 = noshadow,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|pdf)?$
-windowrulev2 = noblur,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|pdf)?$
-windowrulev2 = noanim,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|pdf)?$
-windowrulev2 = rounding 0,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|pdf)?$
+windowrulev2 = float,class:^(wpsoffice|wps|et|wpp|wpspdf|pdf)$,title:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$
+windowrulev2 = noborder,class:^(wpsoffice|wps|et|wpp|wpspdf|pdf)$,title:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$
+windowrulev2 = noshadow,class:^(wpsoffice|wps|et|wpp|wpspdf|pdf)$,title:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$
+windowrulev2 = noblur,class:^(wpsoffice|wps|et|wpp|wpspdf|pdf)$,title:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$
+windowrulev2 = noanim,class:^(wpsoffice|wps|et|wpp|wpspdf|pdf)$,title:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$
+windowrulev2 = rounding 0,class:^(wpsoffice|wps|et|wpp|wpspdf|pdf)$,title:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$
 ```
 
 旧版没有和 `no_follow_mouse` 完全对应的逐窗口写法，想解决“鼠标移开就关闭”只能用全局 `input:follow_mouse = 0`，或给下拉窗口加 `stayfocused`（取舍见 §6.5）。
@@ -264,7 +266,7 @@ windowrulev2 = rounding 0,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wps
 ```lua
 hl.window_rule({
   name = "wps-main-float",
-  match = { class = wps_classes, title = "negative:^(wps|et|wpp|wpspdf|pdf)?$" },
+  match = { class = wps_classes, title = "negative:^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$" },
   float = true,
   maximize = true,
 })
@@ -297,12 +299,28 @@ hl.window_rule({
 ```lua
 -- 备选：让下拉窗口强制保持焦点（更“黏”，但会挡住其它窗口的点击）
 hl.window_rule({
-  match = { class = wps_classes, title = "^(wps|et|wpp|wpspdf|pdf)?$" },
+  match = { class = wps_classes, title = "^(wpsoffice|wps|et|wpp|wpspdf|pdf)?$" },
   stay_focused = true,
 })
 ```
 
 另一种更彻底的做法是把全局的 `input:follow_mouse` 改成 `0`（点击才聚焦），但那会影响整个桌面，不只是 WPS。
+
+### 6.6 为什么第一版规则没解决“鼠标移开就关”
+
+第一版规则里 class 写的是 `wps|et|wpp|wpspdf|pdf`，但 **WPS 365 的主窗口 class 是 `wpsoffice`**（标签式外壳），不是 `et`。结果：
+
+- 下拉窗口（class `et`）被正确浮动、去装饰 → 显示正常；
+- 主窗口 `wpsoffice` 没匹配到 → `no_follow_mouse` 规则从未生效 → 鼠标移到文档上时焦点照旧被主窗口拿走，下拉失焦关闭。
+
+把 `wpsoffice` 加进正则后，规则才真正覆盖主窗口。判断是否生效：
+
+```bash
+# 把鼠标停在 WPS 窗口上（不要点），如果 activewindow 仍是别的程序，说明 no_follow_mouse 生效
+hyprctl activewindow -j | jq -r .class
+```
+
+教训：**主窗口 class 随版本/打包方式变化**（`wpsoffice` / `et` / `wps` / `wpp`），写规则前先用 `hyprctl clients` 抓一次真身，别照着教程抄。
 
 ---
 
@@ -319,6 +337,7 @@ hyprctl configerrors          # 应该没有输出
 - [ ] 没有 Hyprland 的边框 / 圆角 / 阴影；
 - [ ] `hyprctl clients` 里该窗口 `floating: true`；
 - [ ] **鼠标移到文档上，下拉不消失**；
+- [ ] 鼠标悬停在 WPS 主窗口上不会抢走焦点（`no_follow_mouse` 生效）；
 - [ ] 点文档或其它窗口，下拉关闭；
 - [ ] 点选字体后列表正常消失，文档内容不变。
 

@@ -8,14 +8,16 @@
 -- Hyprland 只能把它当普通窗口：平铺、加边框/阴影、抢焦点，
 -- 于是点下拉看起来就像「新开了一个窗口」。
 --
--- 这条规则把这类辅助窗口按弹出菜单处理：浮动、去掉 Hyprland 的装饰。
--- 主窗口标题形如「文件名 - WPS 表格」，不会被匹配到。
+-- 这个文件解决两件事：
+--   1) 下拉被当成普通窗口参与平铺 / 加装饰；
+--   2) 鼠标一移开下拉，焦点被主窗口抢走，WPS 收到失焦后把下拉关掉。
 --
 -- 挂载方式：在 ~/.config/hypr/hyprland.lua 中加 require("hypr.wps")
 -- 版本：Hyprland 0.56.x（Lua 配置）。0.54 及更早的 hyprlang 写法见 README。
 
 local wps_classes = "^(wps|et|wpp|wpspdf|pdf)$"
 
+-- 1) 下拉/调色板等辅助窗口：浮动、去掉 Hyprland 的装饰
 hl.window_rule({
   name = "wps-dropdown-popup",
   match = {
@@ -32,11 +34,33 @@ hl.window_rule({
   no_anim = true,
 })
 
--- 可选：如果主窗口在平铺时也出现菜单/工具栏异常，放开下面这条，
+-- 2) 主窗口：不因「鼠标悬停」抢焦点。
+-- 否则鼠标从下拉移回文档时，input:follow_mouse = 1 会把焦点切给主窗口，
+-- 下拉窗口失焦，WPS 就把它关掉了。点击仍然正常切换焦点，
+-- 所以点文档 / 点别的窗口依旧能关掉下拉。
+hl.window_rule({
+  name = "wps-main-no-hover-focus",
+  match = {
+    class = wps_classes,
+    -- 主窗口标题形如「文件名 - WPS 表格」，不是空/class 名
+    title = "negative:^(wps|et|wpp|wpspdf|pdf)?$",
+  },
+  no_follow_mouse = true,
+})
+
+-- 可选 A：如果主窗口在平铺时也出现菜单/工具栏异常，放开下面这条，
 -- 让 WPS 主窗口浮动 + 最大化（视觉上等同全屏，但不再被平铺裁剪）。
 -- hl.window_rule({
 --   name = "wps-main-float",
 --   match = { class = wps_classes, title = "negative:^(wps|et|wpp|wpspdf|pdf)?$" },
 --   float = true,
 --   maximize = true,
+-- })
+
+-- 可选 B：如果想让下拉“更黏”——连鼠标移到其它程序上也不关闭，
+-- 换成给下拉窗口加 stay_focused。代价：下拉关掉之前几乎点不动其它窗口。
+-- hl.window_rule({
+--   name = "wps-dropdown-stay-focused",
+--   match = { class = wps_classes, title = "^(wps|et|wpp|wpspdf|pdf)?$" },
+--   stay_focused = true,
 -- })

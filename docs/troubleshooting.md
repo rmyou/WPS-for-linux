@@ -39,18 +39,30 @@ for c in json.load(sys.stdin):
 
 说明规则没匹配上。先看 `hyprctl clients` 里该窗口的 `class` / `title`，按实际值改正则。WPS 升级后 class 可能变。
 
-### 鼠标一碰下拉就消失
+### 鼠标一移开下拉，下拉就关闭
 
-Hyprland FAQ 的经典问题。给该窗口加：
+根因不是“鼠标离开”，而是**焦点被主窗口抢走**：Hyprland 默认 `input:follow_mouse = 1`，鼠标移到文档上就把焦点切给主窗口，WPS 的下拉收到 `focus-out` 后自己关掉。
+
+本仓库的 `wps.lua` 已经用这条规则处理（给主窗口设 `no_follow_mouse`，点击仍然正常切焦点）：
 
 ```lua
 hl.window_rule({
-  match = { class = "^(et)$", title = "^(et)?$" },
+  match = { class = "^(wps|et|wpp|wpspdf|pdf)$",
+            title = "negative:^(wps|et|wpp|wpspdf|pdf)?$" },
+  no_follow_mouse = true,
+})
+```
+
+如果还想让下拉在鼠标移到**其它程序**上时也不关，可以改用 `stay_focused`（作用在下拉窗口上）：
+
+```lua
+hl.window_rule({
+  match = { class = "^(wps|et|wpp|wpspdf|pdf)$", title = "^(wps|et|wpp|wpspdf|pdf)?$" },
   stay_focused = true,
 })
 ```
 
-代价：在这个下拉关掉之前，主界面点不动。
+代价：在这个下拉关掉之前，其它窗口基本点不动。
 
 ### 下拉位置不对（不在按钮下面）
 

@@ -201,6 +201,7 @@ WPS 的下拉窗口和主窗口 **class 相同**（`et` / `wps` / `wpp` / `wpspd
 -- 「点下拉框却新开了一个窗口」。这里把这几个辅助窗口按弹出菜单处理。
 local wps_classes = "^(wps|et|wpp|wpspdf|pdf)$"
 
+-- 1) 下拉/调色板等辅助窗口：浮动、去掉 Hyprland 的装饰
 hl.window_rule({
   name = "wps-dropdown-popup",
   match = {
@@ -215,6 +216,19 @@ hl.window_rule({
   no_shadow = true,
   no_blur = true,
   no_anim = true,
+})
+
+-- 2) 主窗口：不因「鼠标悬停」抢焦点。
+-- 否则鼠标从下拉移回文档时，input:follow_mouse=1 会把焦点切给主窗口，
+-- 下拉窗口失焦，WPS 就把它关掉了。点击仍然正常切换焦点，
+-- 所以点文档 / 点别的窗口依旧能关掉下拉。
+hl.window_rule({
+  name = "wps-main-no-hover-focus",
+  match = {
+    class = wps_classes,
+    title = "negative:^(wps|et|wpp|wpspdf|pdf)?$",
+  },
+  no_follow_mouse = true,
 })
 ```
 
@@ -241,6 +255,8 @@ windowrulev2 = noanim,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|
 windowrulev2 = rounding 0,class:^(wps|et|wpp|wpspdf|pdf)$,title:^(wps|et|wpp|wpspdf|pdf)?$
 ```
 
+旧版没有和 `no_follow_mouse` 完全对应的逐窗口写法，想解决“鼠标移开就关闭”只能用全局 `input:follow_mouse = 0`，或给下拉窗口加 `stayfocused`（取舍见 §6.5）。
+
 ### 6.4 备选方案：让 WPS 主窗口浮动 + 最大化
 
 如果主窗口在平铺时也有菜单/工具栏异常，可以改成社区里常见的另一种做法：让 WPS 主窗口浮动并最大化（视觉上仍是全屏，但 WPS 不再被平铺裁剪）：
@@ -256,6 +272,38 @@ hl.window_rule({
 
 两条规则可以共存：辅助窗口走 §6.1，主窗口走这条。按需开启，不必默认。
 
+### 6.5 追加修复：鼠标一移开下拉，下拉就被关掉
+
+**现象**：下拉能正常显示了，但只要鼠标从下拉窗口移到文档上（还没点任何东西），下拉立刻消失，根本来不及选字体。
+
+**原因**：这是「焦点跟随鼠标」和 WPS 的实现撞在一起：
+
+1. Hyprland 默认 `input:follow_mouse = 1`——鼠标移到哪个窗口，焦点就切给哪个窗口；
+2. WPS 的下拉是独立窗口，打开时它拿到焦点；
+3. 鼠标一移到文档上，Hyprland 把焦点切回主窗口；
+4. WPS 的下拉收到 `focus-out`，按弹出菜单的常规逻辑把自己关掉。
+
+所以这不是“鼠标离开”触发的，是**焦点被抢走**触发的。
+
+**修复**：让 WPS 主窗口不因「悬停」抢焦点（`no_follow_mouse`），见 §6.1 规则 2。
+
+- 鼠标从下拉移回文档：焦点不动，下拉保持打开；
+- 点文档任意位置：点击依然会正常切换焦点 → 下拉关闭；
+- 点别的窗口：同样关闭；
+- 选中字体：WPS 自己关闭。
+
+**取舍**：WPS 主窗口不再“鼠标移上去就聚焦”，需要点一下才聚焦。对办公软件来说基本无感；如果你依赖悬停聚焦，可以改成给下拉窗口加 `stay_focused = true`（保持焦点在下拉上），代价是下拉关掉之前几乎点不动其它窗口——这也是它不作为默认方案的原因。
+
+```lua
+-- 备选：让下拉窗口强制保持焦点（更“黏”，但会挡住其它窗口的点击）
+hl.window_rule({
+  match = { class = wps_classes, title = "^(wps|et|wpp|wpspdf|pdf)?$" },
+  stay_focused = true,
+})
+```
+
+另一种更彻底的做法是把全局的 `input:follow_mouse` 改成 `0`（点击才聚焦），但那会影响整个桌面，不只是 WPS。
+
 ---
 
 ## 7. 验证
@@ -270,6 +318,8 @@ hyprctl configerrors          # 应该没有输出
 - [ ] 下拉列表出现在字体框下方，不再把文档窗口挤走（不参与平铺）；
 - [ ] 没有 Hyprland 的边框 / 圆角 / 阴影；
 - [ ] `hyprctl clients` 里该窗口 `floating: true`；
+- [ ] **鼠标移到文档上，下拉不消失**；
+- [ ] 点文档或其它窗口，下拉关闭；
 - [ ] 点选字体后列表正常消失，文档内容不变。
 
 检查辅助窗口状态：
@@ -299,6 +349,7 @@ WPS 会回到“下拉是独立窗口”的原始行为，不会影响文档数�
 - WPS 升级后如果改了窗口 class 或标题策略，需要同步调整正则；用 `hyprctl clients` 重新抓一次即可。
 - 若 WPS 将来改用 Wayland 原生 + `xdg_popup`，这些规则可以删掉。
 - 规则不会改变 WPS 内部的字体列表加载逻辑；字体特别多时首次展开仍可能慢半拍（与渲染无关）。
+- 为了不让下拉失焦，WPS 主窗口加了 `no_follow_mouse`：它不再随鼠标悬停聚焦，需要点击才聚焦；如果你依赖悬停聚焦，可改用 §6.5 的备选方案。
 
 ---
 
@@ -331,7 +382,7 @@ WPS 会回到“下拉是独立窗口”的原始行为，不会影响文档数�
 
 WPS Office for Linux runs under XWayland and implements its font/size dropdowns as **real top-level windows** (`WM_CLASS=et`, empty `WM_NAME`, `WM_TRANSIENT_FOR` set, fixed size), not as X11 override-redirect popups nor Wayland `xdg_popup`s. On a tiling compositor such as Hyprland they are managed like normal windows, so opening the font dropdown looks like "a new window appeared".
 
-Fix: a Hyprland 0.56 Lua window rule that matches WPS windows whose title is empty or equal to the class name, and applies `float`, `decorate=false`, `border_size=0`, `rounding=0`, `no_shadow`, `no_blur`, `no_anim`. See [`wps.lua`](wps.lua).
+Fix: a Hyprland 0.56 Lua window rule that matches WPS windows whose title is empty or equal to the class name, and applies `float`, `decorate=false`, `border_size=0`, `rounding=0`, `no_shadow`, `no_blur`, `no_anim`. A second rule sets `no_follow_mouse` on the main WPS window so that `input:follow_mouse=1` no longer steals focus from the open dropdown and makes WPS close it as soon as the pointer moves back to the document. See [`wps.lua`](wps.lua).
 
 Tested on Omarchy 4.5.0rc1 / Hyprland 0.56.2 / wps-office-365 12.1.2.29183 (AUR).
 
